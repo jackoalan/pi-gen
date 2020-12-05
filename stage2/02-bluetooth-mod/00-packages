@@ -1,0 +1,1 @@
+dpkg-dev flex bison libdbus-glib-1-dev libglib2.0-dev libcap-ng-dev libdw-dev libudev-dev libreadline-dev libical-dev libasound2-dev check debhelper

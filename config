@@ -1,0 +1,23 @@
+export ENABLE_JS=1
+export ENABLE_CAN=0
+if [ "${ENABLE_JS}" == "1" ]; then
+  IMG_NAME=pnet-js
+elif [ "${ENABLE_CAN}" == "1" ]; then
+  IMG_NAME=pnet-can
+else
+  echo "ENABLE_JS or ENABLE_CAN must be set to 1"
+  exit 1
+fi
+if [ "${ENABLE_JS}" == "1" ] && [ "${ENABLE_CAN}" == "1" ]; then
+  echo "ENABLE_JS and ENABLE_CAN cannot both be 1"
+  exit 1
+fi
+RELEASE=bullseye
+LOCALE_DEFAULT=en_US.UTF-8
+TARGET_HOSTNAME=${IMG_NAME}
+KEYBOARD_KEYMAP=us
+KEYBOARD_LAYOUT="English (US)"
+TIMEZONE_DEFAULT="Pacific/Honolulu"
+FIRST_USER_NAME=tiberius
+FIRST_USER_PASS=tiberius
+DEPLOY_ZIP=0
