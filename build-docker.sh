@@ -48,6 +48,21 @@ CONTAINER_NAME=${CONTAINER_NAME:-pigen_work}
 CONTINUE=${CONTINUE:-0}
 PRESERVE_CONTAINER=${PRESERVE_CONTAINER:-0}
 
+export ENABLE_JS="${ENABLE_JS:-0}"
+export ENABLE_CAN="${ENABLE_CAN:-0}"
+if [ "${ENABLE_JS}" == "1" ]; then
+	export IMG_NAME=${IMG_NAME:-pnet-js}
+elif [ "${ENABLE_CAN}" == "1" ]; then
+	export IMG_NAME=${IMG_NAME:-pnet-can}
+else
+	echo "ENABLE_JS or ENABLE_CAN must be set to 1"
+	exit 1
+fi
+if [ "${ENABLE_JS}" == "1" ] && [ "${ENABLE_CAN}" == "1" ]; then
+	echo "ENABLE_JS and ENABLE_CAN cannot both be 1"
+	exit 1
+fi
+
 if [ -z "${IMG_NAME}" ]; then
 	echo "IMG_NAME not set in 'config'" 1>&2
 	echo 1>&2
@@ -89,6 +104,8 @@ if [ "${CONTAINER_EXISTS}" != "" ]; then
 	time ${DOCKER} run --rm --privileged \
 		--volume "${CONFIG_FILE}":/config:ro \
 		-e "GIT_HASH=${GIT_HASH}" \
+		-e "ENABLE_JS=${ENABLE_JS}" \
+		-e "ENABLE_CAN=${ENABLE_CAN}" \
 		--volumes-from="${CONTAINER_NAME}" --name "${CONTAINER_NAME}_cont" \
 		pi-gen \
 		bash -e -o pipefail -c "dpkg-reconfigure qemu-user-static &&
@@ -100,6 +117,8 @@ else
 	time ${DOCKER} run --name "${CONTAINER_NAME}" --privileged \
 		--volume "${CONFIG_FILE}":/config:ro \
 		-e "GIT_HASH=${GIT_HASH}" \
+		-e "ENABLE_JS=${ENABLE_JS}" \
+		-e "ENABLE_CAN=${ENABLE_CAN}" \
 		pi-gen \
 		bash -e -o pipefail -c "dpkg-reconfigure qemu-user-static &&
 	cd /pi-gen; ./build.sh ${BUILD_OPTS} &&

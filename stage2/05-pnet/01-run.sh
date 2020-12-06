@@ -2,9 +2,7 @@
 
 on_chroot << EOF
 pushd /home/"${FIRST_USER_NAME}"
-if [ -d pnet-tiberius ]; then
-  rm -r pnet-tiberius
-fi
+rm -rf pnet-tiberius
 git clone https://github.com/jackoalan/pnet-tiberius
 pushd pnet-tiberius
 git submodule update --recursive --init
@@ -18,12 +16,11 @@ popd
 
 if [ "${ENABLE_JS}" == "1" ]; then
 	systemctl enable pnet-js
-	echo "enabled pnet-js"
 elif [ "${ENABLE_CAN}" == "1" ]; then
 	systemctl enable pnet-can
-	echo "enabled pnet-can"
 fi
 
 popd
+rm -rf pnet-tiberius
 popd
 EOF

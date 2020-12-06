@@ -25,6 +25,10 @@ network={
 EOL
 fi
 
+on_chroot <<EOF
+systemctl disable wpa_supplicant
+EOF
+
 # Disable wifi on 5GHz models if WPA_COUNTRY is not set
 mkdir -p "${ROOTFS_DIR}/var/lib/systemd/rfkill/"
 if [ -n "$WPA_COUNTRY" ]; then

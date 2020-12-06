@@ -143,6 +143,21 @@ do
 	esac
 done
 
+export ENABLE_JS="${ENABLE_JS:-0}"
+export ENABLE_CAN="${ENABLE_CAN:-0}"
+if [ "${ENABLE_JS}" == "1" ]; then
+	export IMG_NAME=${IMG_NAME:-pnet-js}
+elif [ "${ENABLE_CAN}" == "1" ]; then
+	export IMG_NAME=${IMG_NAME:-pnet-can}
+else
+	echo "ENABLE_JS or ENABLE_CAN must be set to 1"
+	exit 1
+fi
+if [ "${ENABLE_JS}" == "1" ] && [ "${ENABLE_CAN}" == "1" ]; then
+	echo "ENABLE_JS and ENABLE_CAN cannot both be 1"
+	exit 1
+fi
+
 export PI_GEN=${PI_GEN:-pi-gen}
 export PI_GEN_REPO=${PI_GEN_REPO:-https://github.com/RPi-Distro/pi-gen}
 
@@ -159,26 +174,26 @@ export ZIP_FILENAME="${ZIP_FILENAME:-"image_${IMG_DATE}-${IMG_NAME}"}"
 export SCRIPT_DIR="${BASE_DIR}/scripts"
 export WORK_DIR="${WORK_DIR:-"${BASE_DIR}/work/${IMG_DATE}-${IMG_NAME}"}"
 export DEPLOY_DIR=${DEPLOY_DIR:-"${BASE_DIR}/deploy"}
-export DEPLOY_ZIP="${DEPLOY_ZIP:-1}"
+export DEPLOY_ZIP="${DEPLOY_ZIP:-0}"
 export LOG_FILE="${WORK_DIR}/build.log"
 
-export TARGET_HOSTNAME=${TARGET_HOSTNAME:-raspberrypi}
+export TARGET_HOSTNAME=${TARGET_HOSTNAME:-${IMG_NAME}}
 
-export FIRST_USER_NAME=${FIRST_USER_NAME:-pi}
-export FIRST_USER_PASS=${FIRST_USER_PASS:-raspberry}
-export RELEASE=${RELEASE:-buster}
+export FIRST_USER_NAME=${FIRST_USER_NAME:-tiberius}
+export FIRST_USER_PASS=${FIRST_USER_PASS:-tiberius}
+export RELEASE=${RELEASE:-bullseye}
 export WPA_ESSID
 export WPA_PASSWORD
 export WPA_COUNTRY
 export ENABLE_SSH="${ENABLE_SSH:-0}"
 export PUBKEY_ONLY_SSH="${PUBKEY_ONLY_SSH:-0}"
 
-export LOCALE_DEFAULT="${LOCALE_DEFAULT:-en_GB.UTF-8}"
+export LOCALE_DEFAULT="${LOCALE_DEFAULT:-en_US.UTF-8}"
 
-export KEYBOARD_KEYMAP="${KEYBOARD_KEYMAP:-gb}"
-export KEYBOARD_LAYOUT="${KEYBOARD_LAYOUT:-English (UK)}"
+export KEYBOARD_KEYMAP="${KEYBOARD_KEYMAP:-us}"
+export KEYBOARD_LAYOUT="${KEYBOARD_LAYOUT:-English (US)}"
 
-export TIMEZONE_DEFAULT="${TIMEZONE_DEFAULT:-Europe/London}"
+export TIMEZONE_DEFAULT="${TIMEZONE_DEFAULT:-Pacific/Honolulu}"
 
 export GIT_HASH=${GIT_HASH:-"$(git rev-parse HEAD)"}
 

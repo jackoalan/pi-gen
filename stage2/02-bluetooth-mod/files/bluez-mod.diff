@@ -1,11 +1,121 @@
---- a/plugins/sixaxis.c
-+++ b/plugins/sixaxis.c
+diff -Naur bluez-5.55/plugins/sixaxis.c bluez-5.55-mod/plugins/sixaxis.c
+--- bluez-5.55/plugins/sixaxis.c	2020-09-06 13:51:06.000000000 +0000
++++ bluez-5.55-mod/plugins/sixaxis.c	2020-12-05 23:05:37.683080374 +0000
 @@ -365,7 +365,7 @@
-
-	btd_device_device_set_name(device, cp->name);
-	btd_device_set_pnpid(device, cp->source, cp->vid, cp->pid, cp->version);
+ 
+ 	btd_device_device_set_name(device, cp->name);
+ 	btd_device_set_pnpid(device, cp->source, cp->vid, cp->pid, cp->version);
 -	btd_device_set_trusted(device, false);
 +	btd_device_set_trusted(device, true);
-	btd_device_set_temporary(device, true);
-
-	closure = g_new0(struct authentication_closure, 1);
+ 	btd_device_set_temporary(device, true);
+ 
+ 	closure = g_new0(struct authentication_closure, 1);
+diff -Naur bluez-5.55/profiles/input/device.c bluez-5.55-mod/profiles/input/device.c
+--- bluez-5.55/profiles/input/device.c	2020-09-06 13:51:06.000000000 +0000
++++ bluez-5.55-mod/profiles/input/device.c	2020-12-05 23:06:48.627353425 +0000
+@@ -1036,6 +1036,22 @@
+ 	return FALSE;
+ }
+ 
++#define BDADDR_JACKS_SIXAXIS   (&(bdaddr_t) {{0x6A, 0x55, 0x61, 0x04, 0x07, 0x00}})
++
++#define SIXAXIS_HID_SDP_RECORD "3601920900000A000100000900013503191124090004"\
++	"350D35061901000900113503190011090006350909656E09006A090100090009350"\
++	"8350619112409010009000D350F350D350619010009001335031900110901002513"\
++	"576972656C65737320436F6E74726F6C6C65720901012513576972656C657373204"\
++	"36F6E74726F6C6C6572090102251B536F6E7920436F6D707574657220456E746572"\
++	"7461696E6D656E74090200090100090201090100090202080009020308210902042"\
++	"8010902052801090206359A35980822259405010904A101A1028501750895011500"\
++	"26FF00810375019513150025013500450105091901291381027501950D0600FF810"\
++	"3150026FF0005010901A10075089504350046FF0009300931093209358102C00501"\
++	"75089527090181027508953009019102750895300901B102C0A1028502750895300"\
++	"901B102C0A10285EE750895300901B102C0A10285EF750895300901B102C0C00902"\
++	"07350835060904090901000902082800090209280109020A280109020B090100090"\
++	"20C093E8009020D280009020E2800"
++
+ static int hidp_add_connection(struct input_device *idev)
+ {
+ 	struct hidp_connadd_req *req;
+@@ -1065,13 +1081,18 @@
+ 	str = g_key_file_get_string(key_file, "ServiceRecords", handle, NULL);
+ 	g_key_file_free(key_file);
+ 
+-	if (!str) {
+-		error("Rejected connection from unknown device %s", dst_addr);
+-		err = -EPERM;
+-		goto cleanup;
+-	}
++	if (!bacmp(&idev->dst, BDADDR_JACKS_SIXAXIS)) {
++		info("jack's sixaxis wants to connect - forging service record");
++		rec = record_from_string(SIXAXIS_HID_SDP_RECORD);
++	} else {
++		if (!str) {
++			error("Rejected connection from unknown device %s", dst_addr);
++			err = -EPERM;
++			goto cleanup;
++		}
+ 
+-	rec = record_from_string(str);
++		rec = record_from_string(str);
++	}
+ 	g_free(str);
+ 
+ 	err = extract_hid_record(rec, req);
+diff -Naur bluez-5.55/profiles/input/server.c bluez-5.55-mod/profiles/input/server.c
+--- bluez-5.55/profiles/input/server.c	2020-09-06 13:51:06.000000000 +0000
++++ bluez-5.55-mod/profiles/input/server.c	2020-12-05 23:09:17.046282020 +0000
+@@ -120,12 +120,42 @@
+ 	device_wait_for_svc_complete(device, sixaxis_sdp_cb, data);
+ }
+ 
++#define BDADDR_JACKS_SIXAXIS   (&(bdaddr_t) {{0x6A, 0x55, 0x61, 0x04, 0x07, 0x00}})
++
++#define SIXAXIS_HID_SDP_RECORD "3601920900000A000100000900013503191124090004"\
++	"350D35061901000900113503190011090006350909656E09006A090100090009350"\
++	"8350619112409010009000D350F350D350619010009001335031900110901002513"\
++	"576972656C65737320436F6E74726F6C6C65720901012513576972656C657373204"\
++	"36F6E74726F6C6C6572090102251B536F6E7920436F6D707574657220456E746572"\
++	"7461696E6D656E74090200090100090201090100090202080009020308210902042"\
++	"8010902052801090206359A35980822259405010904A101A1028501750895011500"\
++	"26FF00810375019513150025013500450105091901291381027501950D0600FF810"\
++	"3150026FF0005010901A10075089504350046FF0009300931093209358102C00501"\
++	"75089527090181027508953009019102750895300901B102C0A1028502750895300"\
++	"901B102C0A10285EE750895300901B102C0A10285EF750895300901B102C0C00902"\
++	"07350835060904090901000902082800090209280109020A280109020B090100090"\
++	"20C093E8009020D280009020E2800"
++
+ static bool dev_is_sixaxis(const bdaddr_t *src, const bdaddr_t *dst)
+ {
+ 	struct btd_device *device;
+ 	uint16_t vid, pid;
+ 	const struct cable_pairing *cp;
+ 
++	if (!bacmp(BDADDR_JACKS_SIXAXIS, dst)) {
++		device = btd_adapter_get_device(adapter_find(src), dst, BDADDR_BREDR);
++
++		info("jack's sixaxis: setting up new device");
++
++		btd_device_device_set_name(device, "Sony PLAYSTATION(R)3 Controller");
++		btd_device_set_pnpid(device, 0x0002, 0x054c, 0x0268, 0x0000);
++		btd_device_set_trusted(device, true);
++		btd_device_set_temporary(device, false);
++		btd_device_set_record(device, HID_UUID, SIXAXIS_HID_SDP_RECORD);
++
++		return true;
++	}
++
+ 	device = btd_adapter_find_device(adapter_find(src), dst, BDADDR_BREDR);
+ 	if (!device)
+ 		return false;
+diff -Naur bluez-5.55/src/adapter.c bluez-5.55-mod/src/adapter.c
+--- bluez-5.55/src/adapter.c	2020-09-06 13:51:06.000000000 +0000
++++ bluez-5.55-mod/src/adapter.c	2020-12-06 01:06:55.871616734 +0000
+@@ -6271,7 +6271,7 @@
+ 	adapter->stored_discoverable = g_key_file_get_boolean(key_file,
+ 					"General", "Discoverable", &gerr);
+ 	if (gerr) {
+-		adapter->stored_discoverable = false;
++		adapter->stored_discoverable = true;
+ 		g_error_free(gerr);
+ 		gerr = NULL;
+ 	}

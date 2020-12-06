@@ -10,7 +10,7 @@ rm -rf "${ROOTFS_DIR}"
 mkdir -p "${ROOTFS_DIR}"
 
 BOOT_SIZE="$((256 * 1024 * 1024))"
-ROOT_SIZE=$(du --apparent-size -s "${EXPORT_ROOTFS_DIR}" --exclude var/cache/apt/archives --exclude boot --block-size=1 | cut -f 1)
+ROOT_SIZE=$(du --apparent-size -s "${EXPORT_ROOTFS_DIR}" --exclude var/cache/apt/archives --exclude var/lib/apt/lists --exclude boot --block-size=1 | cut -f 1)
 
 # All partition sizes and starts will be aligned to this size
 ALIGN="$((4 * 1024 * 1024))"
@@ -18,7 +18,8 @@ ALIGN="$((4 * 1024 * 1024))"
 # some overhead (since actual space usage is usually rounded up to the
 # filesystem block size) and gives some free space on the resulting
 # image.
-ROOT_MARGIN="$(echo "($ROOT_SIZE * 0.2 + 200 * 1024 * 1024) / 1" | bc)"
+#ROOT_MARGIN="$(echo "($ROOT_SIZE * 0.2 + 200 * 1024 * 1024) / 1" | bc)"
+ROOT_MARGIN="$((128 * 1024 * 1024))"
 
 BOOT_PART_START=$((ALIGN))
 BOOT_PART_SIZE=$(((BOOT_SIZE + ALIGN - 1) / ALIGN * ALIGN))
@@ -81,5 +82,5 @@ mount -v "$ROOT_DEV" "${ROOTFS_DIR}" -t ext4
 mkdir -p "${ROOTFS_DIR}/boot"
 mount -v "$BOOT_DEV" "${ROOTFS_DIR}/boot" -t vfat
 
-rsync -aHAXx --exclude /var/cache/apt/archives --exclude /boot "${EXPORT_ROOTFS_DIR}/" "${ROOTFS_DIR}/"
+rsync -aHAXx --exclude /var/cache/apt/archives --exclude /var/lib/apt/lists --exclude /boot "${EXPORT_ROOTFS_DIR}/" "${ROOTFS_DIR}/"
 rsync -rtx "${EXPORT_ROOTFS_DIR}/boot/" "${ROOTFS_DIR}/boot/"
