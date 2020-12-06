@@ -3,14 +3,22 @@
 Tool used to create Raspberry Pi OS images. (Previously known as Raspbian).
 
 
-## Tiberius changes
+## Tiberius Changes
 
 This branch of pi-gen contains many edits to generate images tailored for
-systems of Hawaii Community College's Tiberius robot. Two image flavors are
-available for building:
+systems of Hawaii Community College's Tiberius robot. Robot application
+functionality is provided by
+[pnet-tiberius](https://github.com/jackoalan/pnet-tiberius).
+
+Two image flavors are available for building:
 
 * Joystick bluetooth receiver (pnet-js)
+    * Patches to bluez to be discoverable by default and unconditionally
+      authorize Bluetooth connections from Jack's red Dualshock 3 gamepad.
+    * Installation of pnet-tiberius with pnet-js driver enabled.
 * Talon SRX CAN controller (pnet-can)
+    * Bootloader and network configuration to enable PiCAN2 DUO interface.
+    * Installation of pnet-tiberius with pnet-can driver enabled.
 
 `ENABLE_JS=1` or `ENABLE_CAN=1` may be passed to either of the build methods
 documented below. Populating the `config` file is not necessary since the
