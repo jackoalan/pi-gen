@@ -3,6 +3,27 @@
 Tool used to create Raspberry Pi OS images. (Previously known as Raspbian).
 
 
+## Tiberius changes
+
+This branch of pi-gen contains many edits to generate images tailored for
+systems of Hawaii Community College's Tiberius robot. Two image flavors are
+available for building:
+
+* Joystick bluetooth receiver (pnet-js)
+* Talon SRX CAN controller (pnet-can)
+
+`ENABLE_JS=1` or `ENABLE_CAN=1` may be passed to either of the build methods
+documented below. Populating the `config` file is not necessary since the
+defaults have been modified for Tiberius.
+
+For example:
+
+```bash
+ENABLE_JS=1 ./build-docker.sh
+ENABLE_CAN=1 ./build-docker.sh
+```
+
+
 ## Dependencies
 
 pi-gen runs on Debian-based operating systems. Currently it is only supported on
