@@ -15,8 +15,7 @@ pushd bluez-5.55
 patch -p1 </bluez-mod.diff
 dpkg-buildpackage -b
 popd
-dpkg -i bluez_5.55-1_armhf.deb
-dpkg -i libbluetooth3_5.55-1_armhf.deb
+dpkg -i bluez_5.55-*_armhf.deb libbluetooth3_5.55-*_armhf.deb
 rm -rf *blue*
 sed -i 's|#DiscoverableTimeout = 0|DiscoverableTimeout = 0|' /etc/bluetooth/main.conf
 ln -s /tmp /var/lib/bluetooth

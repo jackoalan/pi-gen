@@ -1,0 +1,114 @@
+diff --git a/debian/rules b/debian/rules
+index b211f97a..e204ba63 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -215,13 +215,13 @@ override_dh_auto_clean:
+ 
+ # Create doxygen documentation:
+ override_dh_auto_build-indep:
+-	dh_auto_build -i --sourcedirectory=debian/standard -- apidoc documentation
++	#dh_auto_build -i --sourcedirectory=debian/standard -- apidoc documentation
+ 	# Create the minified CSS files.
+ 	#  Due to https://github.com/nodejs/node/issues/14752 where nodejs will
+ 	#  leave set O_NONBLOCK on stderr, we pipe stderr through cat which will
+ 	#  create a temporary pipe so this doesn't break the rest of the build.
+ 	#  See: #895154
+-	(lessc debian/missing-sources/ffmpeg-web/src/less/style.less | cleancss > debian/standard/doc/style.min.css) 2>&1 | cat >&2
++	#(lessc debian/missing-sources/ffmpeg-web/src/less/style.less | cleancss > debian/standard/doc/style.min.css) 2>&1 | cat >&2
+ 
+ override_dh_auto_build-arch: $(patsubst %,build_%,$(FLAVORS))
+ 
+diff --git a/libavformat/rtpenc.c b/libavformat/rtpenc.c
+index 63047bec..884b4c6f 100644
+--- a/libavformat/rtpenc.c
++++ b/libavformat/rtpenc.c
+@@ -34,6 +34,7 @@ static const AVOption options[] = {
+     { "ssrc", "Stream identifier", offsetof(RTPMuxContext, ssrc), AV_OPT_TYPE_INT, { .i64 = 0 }, INT_MIN, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM },
+     { "cname", "CNAME to include in RTCP SR packets", offsetof(RTPMuxContext, cname), AV_OPT_TYPE_STRING, { .str = NULL }, 0, 0, AV_OPT_FLAG_ENCODING_PARAM },
+     { "seq", "Starting sequence number", offsetof(RTPMuxContext, seq), AV_OPT_TYPE_INT, { .i64 = -1 }, -1, 65535, AV_OPT_FLAG_ENCODING_PARAM },
++    { "keyframe_replay_params", "Replay params on keyframe", offsetof(RTPMuxContext, keyframe_replay_params), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, AV_OPT_FLAG_ENCODING_PARAM},
+     { NULL },
+ };
+ 
+diff --git a/libavformat/rtpenc.h b/libavformat/rtpenc.h
+index 62dc9ab1..5afa4896 100644
+--- a/libavformat/rtpenc.h
++++ b/libavformat/rtpenc.h
+@@ -61,6 +61,15 @@ struct RTPMuxContext {
+     int flags;
+ 
+     unsigned int frame_count;
++
++    int keyframe_replay_params;
++    int last_sps_size;
++    int last_sps_capacity;
++    uint8_t *last_sps_buf;
++    int last_pps_size;
++    int last_pps_capacity;
++    uint8_t *last_pps_buf;
++    uint8_t last_nal_type;
+ };
+ 
+ typedef struct RTPMuxContext RTPMuxContext;
+diff --git a/libavformat/rtpenc_h264_hevc.c b/libavformat/rtpenc_h264_hevc.c
+index 0c88fc2a..2696d271 100644
+--- a/libavformat/rtpenc_h264_hevc.c
++++ b/libavformat/rtpenc_h264_hevc.c
+@@ -27,6 +27,7 @@
+  * @author Luca Abeni <lucabe72@email.it>
+  */
+ 
++#include "libavcodec/h264.h"
+ #include "libavutil/intreadwrite.h"
+ 
+ #include "avformat.h"
+@@ -52,11 +53,39 @@ static void flush_buffered(AVFormatContext *s1, int last)
+     s->buffered_nals = 0;
+ }
+ 
+-static void nal_send(AVFormatContext *s1, const uint8_t *buf, int size, int last)
++static void nal_send(AVFormatContext *s1, const uint8_t *buf, int size, int last, int replay)
+ {
+     RTPMuxContext *s = s1->priv_data;
+     enum AVCodecID codec = s1->streams[0]->codecpar->codec_id;
+ 
++    if (s->keyframe_replay_params && !replay && codec == AV_CODEC_ID_H264) {
++        // When an IDR slice follows a non-IDR slice, replay the latest SPS and
++        // PPS data to initialize a late-joining decoder.
++        uint8_t nal_type = buf[0] & 0x1F;
++        if (nal_type == H264_NAL_SPS) {
++            if (s->last_sps_capacity < size) {
++                s->last_sps_capacity = size;
++                s->last_sps_buf = av_realloc(s->last_sps_buf, size);
++            }
++            s->last_sps_size = size;
++            memcpy(s->last_sps_buf, buf, size);
++        } else if (nal_type == H264_NAL_PPS) {
++            if (s->last_pps_capacity < size) {
++                s->last_pps_capacity = size;
++                s->last_pps_buf = av_realloc(s->last_pps_buf, size);
++            }
++            s->last_pps_size = size;
++            memcpy(s->last_pps_buf, buf, size);
++        } else if (nal_type == H264_NAL_IDR_SLICE &&
++                   s->last_nal_type == H264_NAL_SLICE && s->last_sps_size &&
++                   s->last_pps_size) {
++            av_log(s1, AV_LOG_DEBUG, "Replaying last sps and pps\n");
++            nal_send(s1, s->last_sps_buf, s->last_sps_size, 0, 1);
++            nal_send(s1, s->last_pps_buf, s->last_pps_size, 0, 1);
++        }
++        s->last_nal_type = nal_type;
++    }
++
+     av_log(s1, AV_LOG_DEBUG, "Sending NAL %x of len %d M=%d\n", buf[0] & 0x1F, size, last);
+     if (size <= s->max_payload_size) {
+         int buffered_size = s->buf_ptr - s->buf;
+@@ -200,7 +229,7 @@ void ff_rtp_send_h264_hevc(AVFormatContext *s1, const uint8_t *buf1, int size)
+             while (!*(r++));
+             r1 = ff_avc_find_startcode(r, end);
+         }
+-        nal_send(s1, r, r1 - r, r1 == end);
++        nal_send(s1, r, r1 - r, r1 == end, 0);
+         r = r1;
+     }
+     flush_buffered(s1, 1);
