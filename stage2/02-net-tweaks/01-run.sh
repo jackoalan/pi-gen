@@ -6,7 +6,11 @@ install -v -m 644 files/wait.conf		"${ROOTFS_DIR}/etc/systemd/system/dhcpcd.serv
 install -v -d					"${ROOTFS_DIR}/etc/wpa_supplicant"
 install -v -m 600 files/wpa_supplicant.conf	"${ROOTFS_DIR}/etc/wpa_supplicant/"
 
-install -v -m 644 files/ifcfg-eth0	"${ROOTFS_DIR}/etc/network/interfaces.d/ifcfg-eth0"
+if [ "${ENABLE_CAN}" == "1" ]; then
+install -v -m 644 files/ifcfg-eth0-can	"${ROOTFS_DIR}/etc/network/interfaces.d/ifcfg-eth0"
+elif [ "${ENABLE_JS}" == "1" ]; then
+install -v -m 644 files/ifcfg-eth0-js	"${ROOTFS_DIR}/etc/network/interfaces.d/ifcfg-eth0"
+fi
 
 if [ -v WPA_COUNTRY ]; then
 	echo "country=${WPA_COUNTRY}" >> "${ROOTFS_DIR}/etc/wpa_supplicant/wpa_supplicant.conf"
