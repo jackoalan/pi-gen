@@ -1,7 +1,27 @@
+diff --git a/debian/ffmpeg-doc.install b/debian/ffmpeg-doc.install
+index 52bbdfc3..9234e066 100644
+--- a/debian/ffmpeg-doc.install
++++ b/debian/ffmpeg-doc.install
+@@ -1,6 +1,4 @@
+-debian/standard/doc/doxy/html/*		usr/share/doc/ffmpeg/api
+ usr/share/doc/ffmpeg/*.html		usr/share/doc/ffmpeg/manual
+-debian/standard/doc/style.min.css	usr/share/doc/ffmpeg/manual
+ doc/APIchanges				usr/share/doc/ffmpeg/developer-info
+ doc/*.txt				usr/share/doc/ffmpeg/developer-info
+ usr/share/man/man3
 diff --git a/debian/rules b/debian/rules
-index b211f97a..e204ba63 100755
+index b211f97a..f7741101 100755
 --- a/debian/rules
 +++ b/debian/rules
+@@ -17,7 +17,7 @@ export DEB_LDFLAGS_MAINT_STRIP=-Wl,-Bsymbolic-functions
+ # Package name for the extra flavor.
+ SHLIB_PKGS := $(shell sed -nr '/extra/! s/^Package:[[:space:]]*(lib.*[0-9]+)[[:space:]]*$$/\1/p' debian/control)
+ EXTRA_PKGS := $(shell sed -nr 's/^Package:[[:space:]]*(.*extra[0-9]+)[[:space:]]*$$/\1/p' debian/control)
+-FLAVORS = standard extra static
++FLAVORS = standard
+ 
+ # Most possible features, compatible with effective licensing of GPLv2+
+ CONFIG := --prefix=/usr \
 @@ -215,13 +215,13 @@ override_dh_auto_clean:
  
  # Create doxygen documentation:
@@ -18,6 +38,22 @@ index b211f97a..e204ba63 100755
  
  override_dh_auto_build-arch: $(patsubst %,build_%,$(FLAVORS))
  
+@@ -262,13 +262,13 @@ ifeq (powerpc,$(DEB_HOST_ARCH))
+ 	install -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/altivec
+ 	install -m 644 debian/altivec/*/*.so.* debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/altivec
+ endif
+-	dh_auto_install -a --sourcedirectory=debian/extra --destdir=debian/tmp/extra
++	#dh_auto_install -a --sourcedirectory=debian/extra --destdir=debian/tmp/extra
+ ifeq (powerpc,$(DEB_HOST_ARCH))
+ 	install -d debian/tmp/extra/usr/lib/$(DEB_HOST_MULTIARCH)/altivec
+ 	install -m 644 debian/altivec-extra/*/*.so.* debian/tmp/extra/usr/lib/$(DEB_HOST_MULTIARCH)/altivec
+ endif
+ 	# Use the static libraries from the --disable-pic build
+-	install -m 644 debian/static/*/lib*.a debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)
++	#install -m 644 debian/static/*/lib*.a debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)
+ 
+ override_dh_auto_install-indep:
+ 	$(MAKE) -C debian/standard DESTDIR=$(CURDIR)/debian/tmp install-doc install-examples
 diff --git a/libavformat/rtpenc.c b/libavformat/rtpenc.c
 index 63047bec..884b4c6f 100644
 --- a/libavformat/rtpenc.c

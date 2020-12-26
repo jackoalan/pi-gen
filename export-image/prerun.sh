@@ -19,7 +19,7 @@ ALIGN="$((4 * 1024 * 1024))"
 # filesystem block size) and gives some free space on the resulting
 # image.
 #ROOT_MARGIN="$(echo "($ROOT_SIZE * 0.2 + 200 * 1024 * 1024) / 1" | bc)"
-ROOT_MARGIN="$((128 * 1024 * 1024))"
+ROOT_MARGIN="$((256 * 1024 * 1024))"
 
 BOOT_PART_START=$((ALIGN))
 BOOT_PART_SIZE=$(((BOOT_SIZE + ALIGN - 1) / ALIGN * ALIGN))
@@ -40,9 +40,16 @@ BOOT_LENGTH=$(echo "$PARTED_OUT" | grep -e '^1:' | cut -d':' -f 4 | tr -d B)
 ROOT_OFFSET=$(echo "$PARTED_OUT" | grep -e '^2:' | cut -d':' -f 2 | tr -d B)
 ROOT_LENGTH=$(echo "$PARTED_OUT" | grep -e '^2:' | cut -d':' -f 4 | tr -d B)
 
+ensure_next_loopdev() {
+	local loopdev
+	loopdev="$(losetup -f)"
+	loopmaj="$(echo "$loopdev" | sed -E 's/.*[^0-9]*?([0-9]+)$/\1/')"
+	[[ -b "$loopdev" ]] || mknod "$loopdev" b 7 "$loopmaj"
+}
+
 echo "Mounting BOOT_DEV..."
 cnt=0
-until BOOT_DEV=$(losetup --show -f -o "${BOOT_OFFSET}" --sizelimit "${BOOT_LENGTH}" "${IMG_FILE}"); do
+until ensure_next_loopdev && BOOT_DEV=$(losetup --show -f -o "${BOOT_OFFSET}" --sizelimit "${BOOT_LENGTH}" "${IMG_FILE}"); do
 	if [ $cnt -lt 5 ]; then
 		cnt=$((cnt + 1))
 		echo "Error in losetup for BOOT_DEV.  Retrying..."
@@ -55,7 +62,7 @@ done
 
 echo "Mounting ROOT_DEV..."
 cnt=0
-until ROOT_DEV=$(losetup --show -f -o "${ROOT_OFFSET}" --sizelimit "${ROOT_LENGTH}" "${IMG_FILE}"); do
+until ensure_next_loopdev && ROOT_DEV=$(losetup --show -f -o "${ROOT_OFFSET}" --sizelimit "${ROOT_LENGTH}" "${IMG_FILE}"); do
 	if [ $cnt -lt 5 ]; then
 		cnt=$((cnt + 1))
 		echo "Error in losetup for ROOT_DEV.  Retrying..."
