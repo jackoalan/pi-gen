@@ -28,7 +28,7 @@ make -j`nproc`
 make install
 popd
 
-systemctl enable vid-sender
+systemctl enable vid-sender-front
 
 popd
 rm -rf vid-tiberius
