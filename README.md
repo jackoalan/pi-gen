@@ -8,7 +8,9 @@ Tool used to create Raspberry Pi OS images. (Previously known as Raspbian).
 This branch of pi-gen contains many edits to generate images tailored for
 systems of Hawaii Community College's Tiberius robot. Robot application
 functionality is provided by
-[pnet-tiberius](https://github.com/jackoalan/pnet-tiberius).
+[pnet-tiberius](https://github.com/jackoalan/pnet-tiberius). Webcam streaming
+functionality is provided by
+[vid-tiberius](https://github.com/jackoalan/vid-tiberius).
 
 Two image flavors are available for building:
 
@@ -19,6 +21,7 @@ Two image flavors are available for building:
 * Talon SRX CAN controller (pnet-can)
     * Bootloader and network configuration to enable PiCAN2 DUO interface.
     * Installation of pnet-tiberius with pnet-can driver enabled.
+    * Installation of vid-tiberius for webcam streaming to HMI.
 
 `ENABLE_JS=1` or `ENABLE_CAN=1` may be passed to either of the build methods
 documented below. Populating the `config` file is not necessary since the
